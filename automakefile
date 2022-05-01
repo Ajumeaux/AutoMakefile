@@ -1,0 +1,124 @@
+##
+## EPITECH PROJECT, 2021
+## B-SYN-200-LIL-2-1-automakefile-antoine.jumeaux
+## File description:
+## kip-synthesis
+##
+
+#!/bin/bash
+
+src_count=0
+i=0
+
+if [ ! -f $1 ] | [ ! -z $2 ] | [ ! -s $1 ] | [ -z $1 ]; then
+    exit 84;
+else
+    cp $1 config_tmp
+    chmod +w config_tmp
+    echo -e "\n" >> config_tmp
+    while IFS=';' read title var; do
+        if [[ $title == *.c ]]; then
+            src_array+=("$title")
+            depend_array+=("$var")
+            ((src_count++))
+        elif [ "$title" = PROJECT_DIR ]; then
+            project_dir=$var
+        elif [ "$title" = EXEC ]; then
+            exec_name=$var
+        elif [ "$title" = CC ]; then
+            cc_method=$var
+        elif [ "$title" = SOURCES_DIR ]; then
+            sources_dir=$var
+        elif [ "$title" = CFLAGS ]; then
+            cflags=$var
+        elif [ "$title" = LDFLAGS ]; then
+            ldflags=$var
+        elif [ "$title" = HEADERS_DIR ]; then
+            header_dir=$var
+        elif [ "$title" = LIBS_DIR ]; then
+            librarys=$var
+        elif [ "$title" = BCK_DIR ]; then
+            backup=$var
+        elif [ "$title" = ZIP ]; then
+            zip=$var
+        elif [ "$title" = ZIPFLAGS ]; then
+            zipflags=$var
+        elif [ "$title" = UNZIP ]; then
+            unzip=$var
+        elif [ "$title" = UNZIPFLAGS ]; then
+            unzipflags=$var
+        fi
+    done < config_tmp
+    rm config_tmp
+    if [ -z "$sources_dir" ]; then
+        sources_dir=.
+    fi
+    if [ -z "$exec_name" ]; then
+        exec_name=a.out
+    fi
+    if [ -z "$cc_method" ]; then
+        cc_method=gcc
+    fi
+    if [ -z "$project_dir" ] | [ src_count = 0 ]; then
+        exit 84;
+    fi
+    if [ ! -d $project_dir ]; then
+        exit 84;
+    fi
+    echo -e "##\n## EPITECH PROJECT, 2020" > $project_dir/Makefile
+    echo -e "## makefile for $exec_name\n## File description:" >> $project_dir/Makefile
+    echo -e "## Makefile\n##\n" >> $project_dir/Makefile
+    echo -e -n "SRC\t=" >> $project_dir/Makefile
+    while (("$i" < "$src_count")); do
+        if [ ! -f $project_dir/$sources_dir/${src_array[i]} ]; then
+            exit 84
+        fi
+        if (("$i" == 0)); then
+            echo -e "\t$sources_dir/${src_array[i]}\t\\" >> $project_dir/Makefile
+        elif (("$i" < $src_count - 1)); then
+            echo -e "\t\t$sources_dir/${src_array[i]}\t\\" >> $project_dir/Makefile
+        else
+            echo -e "\t\t$sources_dir/${src_array[i]}" >> $project_dir/Makefile
+        fi
+        ((i++))
+    done
+    echo -e '\nOBJ\t=\t$(SRC:.c=.o)' >> $project_dir/Makefile
+    echo -e "\nNAME\t=\t$exec_name" >> $project_dir/Makefile
+    if [ ! -z "$zip" ] && [ ! -z "$zipflags" ] && [ ! -z "$unzip" ] && [ ! -z "$unzipflags" ] && [ ! -z "$backup" ]; then
+        echo -e "\nVERSION\t=\t\$(file < $backup/.version)" >> $project_dir/Makefile
+    fi
+    if [ ! -z "$cflags" ]; then
+        echo -e "\nCFLAGS\t=\t$cflags -I./$header_dir" >> $project_dir/Makefile
+    fi
+    if [ ! -z "$ldflags" ]; then
+        echo -e "\nLDFLAGS\t=\t$ldflags" >> $project_dir/Makefile
+    fi
+    echo -e '\nall:\t$(OBJ)' >> $project_dir/Makefile
+    if [ ! -z $librarys ] && [ -f $project_dir/$librarys/Makefile ]; then
+        echo -e "\t\tmake -C $librarys all" >> $project_dir/Makefile
+    fi
+    echo -e -n "\t\t$cc_method -o " >> $project_dir/Makefile
+    echo -e -n '$(NAME) $(OBJ) $(CFLAGS)' >> $project_dir/Makefile
+    if [ ! -z "$ldflags" ]; then
+        echo -e '$(LDFLAGS)' >> $project_dir/Makefile
+    else
+        echo -e "" >> $project_dir/Makefile
+    fi
+    echo -e "\nclean:" >> $project_dir/Makefile
+    echo -e '\t\trm -f $(OBJ)' >> $project_dir/Makefile
+    echo -e "\nfclean:\tclean" >> $project_dir/Makefile
+    echo -e '\t\trm -f $(NAME)' >> $project_dir/Makefile
+    echo -e '\nre:\t\tfclean\t\' >> $project_dir/Makefile
+    echo -e '\t\tall' >> $project_dir/Makefile
+    if [ ! -z "$zip" ] && [ ! -z "$zipflags" ] && [ ! -z "$unzip" ] && [ ! -z "$unzipflags" ] && [ ! -z "$backup" ]; then
+        echo "1" > $project_dir/$backup/.version
+        echo -e -n "\narchive:\n\t\t\t$zip $zipflags $backup/$backup" >> $project_dir/Makefile
+        echo -e ".$zip.gz $sources_dir/*.c" >> $project_dir/Makefile
+        echo -e "\t\t\techo \$(shell expr \$(VERSION) + 1) > $backup/.version" >> $project_dir/Makefile
+        echo -e "\t\t\techo \"$backup file generated.\"" >> $project_dir/Makefile
+        echo -e "\nrevert:\n\t\t\t$unzip $unzipflags $backup/$backup.$zip.gz $sources_dir/" >> $project_dir/Makefile
+        echo -e "\t\t\techo \$(shell expr \$(VERSION) - 1) > $backup/.version" >> $project_dir/Makefile
+        echo -e "\ndelete:\n\t\trm -f $backup/$backup.$zip.gz" >> $project_dir/Makefile
+        echo -e "\nnum:\n\t\techo \$(VERSION)" >> $project_dir/Makefile
+    fi
+fi
